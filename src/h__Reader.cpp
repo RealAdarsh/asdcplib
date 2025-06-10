@@ -335,10 +335,22 @@ ASDCP::Read_EKLV_Packet(Kumu::IFileReader& File, const ASDCP::Dictionary& Dict,
       assert(SourceLength);
 	  
       if ( FrameBuf.Capacity() < SourceLength )
-	{
-	  DefaultLogSink().Error("FrameBuf.Capacity: %u SourceLength: %u\n", FrameBuf.Capacity(), SourceLength);
-	  return RESULT_SMALLBUF;
-	}
+  	{
+  		Result_t resize_result = FrameBuf.Capacity((ui32_t)PacketLength);
+
+  		if (ASDCP_SUCCESS(resize_result))
+  		{
+  			DefaultLogSink().Warn("FrameBuf automatically resized to %u bytes\n",
+								   (ui32_t)PacketLength);
+  		}
+  		else
+  		{
+  			char intbuf[IntBufferLen];
+  			DefaultLogSink().Error("FrameBuf.Capacity: %u FrameLength: %s (resize failed)\n",
+								   FrameBuf.Capacity(), ui64sz(PacketLength, intbuf));
+  			return RESULT_SMALLBUF;
+  		}
+  	}
 
       ui32_t esv_length = calc_esv_length(SourceLength, PlaintextOffset);
 
@@ -398,13 +410,23 @@ ASDCP::Read_EKLV_Packet(Kumu::IFileReader& File, const ASDCP::Dictionary& Dict,
     }
   else if ( Key.MatchIgnoreStream(EssenceUL) ) // ignore the stream number
     { // read plaintext frame
-       if ( FrameBuf.Capacity() < PacketLength )
-	{
-	  char intbuf[IntBufferLen];
-	  DefaultLogSink().Error("FrameBuf.Capacity: %u FrameLength: %s\n",
-				 FrameBuf.Capacity(), ui64sz(PacketLength, intbuf));
-	  return RESULT_SMALLBUF;
-	}
+      if ( FrameBuf.Capacity() < PacketLength )
+      {
+          Result_t resize_result = FrameBuf.Capacity((ui32_t)PacketLength);
+          
+          if (ASDCP_SUCCESS(resize_result))
+          {
+              DefaultLogSink().Warn("FrameBuf automatically resized to %u bytes\n", 
+                                   (ui32_t)PacketLength);
+          }
+          else
+          {
+              char intbuf[IntBufferLen];
+              DefaultLogSink().Error("FrameBuf.Capacity: %u FrameLength: %s (resize failed)\n",
+                                   FrameBuf.Capacity(), ui64sz(PacketLength, intbuf));
+              return RESULT_SMALLBUF;
+          }
+      }
 
       // read the data into the supplied buffer
       ui32_t read_count;
