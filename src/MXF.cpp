@@ -232,6 +232,9 @@ ASDCP::MXF::Partition::PacketList::DeleteMDObjectByID(const UUID& ObjectID)
        return RESULT_FAIL;
     }
 
+  // Type lookups and destruction iterate m_List, so unlink the object from
+  // both owning indexes before releasing it.
+  m_List.remove((*mi).second);
   delete (*mi).second;
   m_Map.erase(mi);
   return RESULT_OK;
